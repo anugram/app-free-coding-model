@@ -4,10 +4,5 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
     }
-    includeBuild("../node_modules/@react-native/gradle-plugin")
 }
-plugins {
-    id("com.facebook.react")
-}
-includeBuild("../node_modules/@react-native/gradle-plugin")
 include ":app"

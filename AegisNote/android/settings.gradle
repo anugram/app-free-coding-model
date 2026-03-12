@@ -1,0 +1,10 @@
+pluginManagement { includeBuild("../node_modules/@react-native/gradle-plugin") }
+plugins {
+    id("com.facebook.react.settings")
+}
+extensions.configure(com.facebook.react.ReactExtension) {
+    reactNativeDir = file("../node_modules/react-native")
+    codegenDir = file("../node_modules/@react-native/codegen")
+    cliFile = file("../node_modules/@react-native/cli/build/bin/cli")
+}
+includeBuild("../node_modules/@react-native/gradle-plugin")

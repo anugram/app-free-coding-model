@@ -1,0 +1,42 @@
+# React Native
+node_modules/
+.npm
+.yarn
+.babelcache.js
+.gradle
+build/
+*.csv
+*.log
+
+# iOS
+ios/build/
+ios/Pods/
+*.xcodeproj
+*.xcworkspace
+!*.xcodeproj/project.pbxproj
+!*.xcworkspace/contents.xcworkspacedata
+
+# Android
+android/build/
+android/app/build/
+android/.gradle
+gradle/wrapper/gradle-wrapper.jar
+android/keystores/debug.keystore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Coverage
+coverage/
+
+# Memory dumps
+*.heapsnapshot

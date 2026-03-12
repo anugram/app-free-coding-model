@@ -1,4 +1,3 @@
-// AegisNote Android app build configuration
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
@@ -44,10 +43,15 @@ android {
 }
 
 dependencies {
+    // React Native
     implementation("com.facebook.react:react-android")
-    implementation("com.facebook.react:react-native-sqlcipher")
+
+    // SQLite support
     implementation("androidx.sqlite:sqlite:2.4.0")
+
+    // Android Security Crypto for Keystore
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
-    implementation("net.zetetic:android-database-sqlcipher:4.5.4@aar")
+
+    // Kotlin stdlib
     implementation("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
 }

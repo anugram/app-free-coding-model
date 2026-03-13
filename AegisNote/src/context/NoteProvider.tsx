@@ -52,11 +52,23 @@ export const NoteProvider: React.FC<NoteProviderProps> = ({ children, keyManager
       try {
         // Check if key exists, if not generate it
         const hasKey = await keyManager.hasKey();
-        if (!hasKey) {
-          console.log('No key found, generating new key...');
-          await keyManager.generateAndStoreKey();
-          console.log('Key generated successfully');
+        console.log('[NoteProvider] Key exists:', hasKey);
+        if (hasKey) {
+          // Delete existing key to ensure clean state
+          console.log('[NoteProvider] Deleting existing key...');
+          await keyManager.deleteKey();
         }
+
+        console.log('Generating new key...');
+        const generated = await keyManager.generateAndStoreKey();
+        console.log('Key generated:', generated);
+
+        // Verify key was stored
+        const hasKeyAfter = await keyManager.hasKey();
+        console.log('[NoteProvider] Key exists after generation:', hasKeyAfter);
+
+        const key = await keyManager.retrieveKey();
+        console.log('[NoteProvider] Retrieved key length:', key?.length || 0);
 
         await initialize();
       } catch (error) {

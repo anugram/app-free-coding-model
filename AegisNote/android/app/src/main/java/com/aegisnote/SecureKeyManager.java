@@ -42,7 +42,7 @@ public class SecureKeyManager {
                     .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                     .setKeySize(KEY_SIZE)
                     .setUserAuthenticationRequired(false)
-                    .setIsStrongBoxBacked(true)
+                    .setIsStrongBoxBacked(false)
                     .build()
             );
             keyGenerator.generateKey();
@@ -54,22 +54,34 @@ public class SecureKeyManager {
 
     public String retrieveKey() {
         try {
-            KeyStore.Entry entry = keyStore.getEntry(KEY_ALIAS, null);
-            if (entry instanceof KeyStore.SecretKeyEntry) {
-                SecretKey secretKey = ((KeyStore.SecretKeyEntry) entry).getSecretKey();
-                byte[] encoded = secretKey.getEncoded();
-                return encoded != null ? Base64.encodeToString(encoded, Base64.NO_WRAP) : null;
+            // Use get() instead of getEntry() - simpler approach
+            java.security.Key key = keyStore.getKey(KEY_ALIAS, null);
+            if (key != null) {
+                android.util.Log.d("SecureKeyManager", "Key found, algorithm: " + key.getAlgorithm());
+                byte[] encoded = key.getEncoded();
+                if (encoded != null) {
+                    String result = Base64.encodeToString(encoded, Base64.NO_WRAP);
+                    android.util.Log.d("SecureKeyManager", "Retrieved key, encoded length: " + encoded.length);
+                    return result;
+                }
+                android.util.Log.d("SecureKeyManager", "Key encoded is null");
+                return null;
             }
+            android.util.Log.d("SecureKeyManager", "Key not found in keystore");
             return null;
         } catch (Exception e) {
+            android.util.Log.e("SecureKeyManager", "Error retrieving key: " + e.getMessage(), e);
             return null;
         }
     }
 
     public boolean hasKey() {
         try {
-            return keyStore.entryInstanceOf(KEY_ALIAS, KeyStore.SecretKeyEntry.class);
+            boolean result = keyStore.entryInstanceOf(KEY_ALIAS, KeyStore.SecretKeyEntry.class);
+            android.util.Log.d("SecureKeyManager", "hasKey: " + result);
+            return result;
         } catch (Exception e) {
+            android.util.Log.e("SecureKeyManager", "Error checking key: " + e.getMessage(), e);
             return false;
         }
     }

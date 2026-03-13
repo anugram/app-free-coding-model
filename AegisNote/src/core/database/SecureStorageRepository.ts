@@ -17,6 +17,13 @@ interface SQLCipherDatabase {
   getOpenDatabaseNames(): Promise<string[]>;
 }
 
+// Check if the database module is available
+import Database from 'react-native-sqlcipher-storage';
+console.log('[SQLCipher] Database module:', Database ? 'LOADED' : 'NOT LOADED');
+if (Database && Database.openDatabase) {
+  console.log('[SQLCipher] openDatabase:', typeof Database.openDatabase);
+}
+
 //declare module 'react-native-sqlcipher-storage' {
 //  export interface SQLiteDatabase {
 //    openDatabase(
@@ -98,6 +105,7 @@ export class SecureStorageRepository implements StorageRepository {
 
     // Get the encryption key from secure key manager
     const key = await this.keyManager.retrieveKey();
+    console.log('[SecureStorageRepository] Retrieved encryption key, length:', key?.length || 0);
     if (!key) {
       throw new Error(
         'Database encryption key not found. Please generate a key first.',
@@ -105,6 +113,7 @@ export class SecureStorageRepository implements StorageRepository {
     }
 
     try {
+      console.log('[SQLCipher] Opening database with key (length:', key.length + ')');
       // Open the encrypted database
       this.database = Database.openDatabase(
         'aegisnote.db',
@@ -116,13 +125,15 @@ export class SecureStorageRepository implements StorageRepository {
           console.error('Error opening database:', err);
         },
       );
+      console.log('[SQLCipher] Database object:', this.database);
 
       // Create the notes table
       await this.createTables();
 
       this.isInitialized = true;
-    } catch (error) {
-      throw new Error(`Failed to initialize secure database: ${error}`);
+    } catch (error: any) {
+      console.error('[SQLCipher] Detailed error:', error);
+      throw new Error(`Failed to initialize secure database: ${error?.message || error}`);
     }
   }
 

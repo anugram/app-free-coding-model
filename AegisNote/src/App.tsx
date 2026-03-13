@@ -6,8 +6,8 @@
  * Uses Zustand for reactive state management and NoteProvider for context.
  */
 
-import React, {useState, useCallback} from 'react';
-import {SafeAreaView, StyleSheet, View} from 'react-native';
+import React, {useState, useCallback, useEffect} from 'react';
+import {SafeAreaView, StyleSheet, View, ActivityIndicator, Text} from 'react-native';
 import {SecureKeyManager} from './core/SecureKeyManager';
 import {NoteProvider} from './context/NoteProvider';
 import {NoteListView} from './views/NoteListView';

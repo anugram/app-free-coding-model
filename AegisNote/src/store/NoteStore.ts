@@ -5,11 +5,21 @@
  */
 
 import {create} from 'zustand';
-import {DevTools} from 'zustand/middleware';
 
 import {SecureStorageRepository} from '../core/database/SecureStorageRepository';
 import {SecureKeyManager} from '../core/SecureKeyManager';
-import {Note, NoteEvent} from '../types';
+import {Note} from '../types';
+
+/**
+ * Generate a UUID v4 string (fallback for React Native without crypto)
+ */
+const generateUUID = (): string => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
 
 // State interface
 interface NoteState {
@@ -26,6 +36,7 @@ interface NoteState {
   hasNotes: boolean;
 
   // Actions
+  setKeyManager(keyManager: SecureKeyManager): void;
   initialize(): Promise<void>;
   loadNotes(): Promise<void>;
   selectNote(noteId: string | null): void;
@@ -52,10 +63,9 @@ const initializeRepository = async (keyManager: SecureKeyManager): Promise<Secur
  * Features:
  * - Reactive state updates with Zustand
  * - Memory security: flushes decrypted notes when app goes to background
- * - DevTools support for debugging
  * - Centralized note CRUD operations
  */
-export const useNoteStore = create<NoteState & {keyManager: SecureKeyManager | null}>(
+export const useNoteStore = create<NoteState & {keyManager: SecureKeyManager | null; setKeyManager: (keyManager: SecureKeyManager) => void}>(
   (set, get) => ({
     // Initial state
     notes: [],
@@ -63,6 +73,7 @@ export const useNoteStore = create<NoteState & {keyManager: SecureKeyManager | n
     isLoading: true,
     isSaving: false,
     error: null,
+    keyManager: null,
 
     // Derived state
     get hasNotes() {
@@ -132,7 +143,7 @@ export const useNoteStore = create<NoteState & {keyManager: SecureKeyManager | n
 
         // Create a new note with empty content (will be encrypted on update)
         const newNote: Note = {
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           title: 'New Note',
           encryptedContent: '',
           iv: '',
@@ -267,10 +278,7 @@ export const useNoteStore = create<NoteState & {keyManager: SecureKeyManager | n
   })
 );
 
-// Add DevTools in development
-if (__DEV__) {
-  useNoteStore.use(DevTools());
-}
+// DevTools removed - not available in Zustand v5
 
 // Background event handler for memory security
 // Call this when the app goes to background (iOS/Android)

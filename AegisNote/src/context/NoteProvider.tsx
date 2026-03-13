@@ -31,7 +31,12 @@ export interface NoteProviderProps {
  * - Cleans up resources on unmount
  */
 export const NoteProvider: React.FC<NoteProviderProps> = ({ children, keyManager }) => {
-  const { initialize, flushMemory } = useNoteStore();
+  const { initialize, flushMemory, setKeyManager, isLoading } = useNoteStore();
+
+  // Set key manager when provider mounts
+  useEffect(() => {
+    setKeyManager(keyManager);
+  }, [setKeyManager, keyManager]);
 
   // Handle app state changes
   const handleAppStateChange = useCallback((nextAppState: AppStateStatus) => {
@@ -45,6 +50,14 @@ export const NoteProvider: React.FC<NoteProviderProps> = ({ children, keyManager
   useEffect(() => {
     const initStore = async () => {
       try {
+        // Check if key exists, if not generate it
+        const hasKey = await keyManager.hasKey();
+        if (!hasKey) {
+          console.log('No key found, generating new key...');
+          await keyManager.generateAndStoreKey();
+          console.log('Key generated successfully');
+        }
+
         await initialize();
       } catch (error) {
         console.error('Failed to initialize note store:', error);

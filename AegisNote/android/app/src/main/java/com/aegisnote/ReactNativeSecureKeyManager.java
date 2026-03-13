@@ -14,7 +14,7 @@ public class ReactNativeSecureKeyManager extends ReactContextBaseJavaModule {
     public ReactNativeSecureKeyManager(ReactApplicationContext reactContext) {
         super(reactContext);
         this.mReactContext = reactContext;
-        this.mSecureKeyManager = SecureKeyManager.instance;
+        this.mSecureKeyManager = SecureKeyManager.getInstance();
     }
 
     @NonNull

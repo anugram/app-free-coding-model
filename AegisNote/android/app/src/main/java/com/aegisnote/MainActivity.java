@@ -22,6 +22,6 @@ public class MainActivity extends ReactActivity {
    */
   @Override
   protected ReactActivityDelegate createReactActivityDelegate() {
-    return new DefaultReactActivityDelegate(this, getMainComponentName());
+    return new DefaultReactActivityDelegate(this, getMainComponentName(), false);
   }
 }

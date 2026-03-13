@@ -75,6 +75,22 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace "com.aegisnote"
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs = ['src/main/java']
+            kotlin.srcDirs = ['src/main/kotlin']
+        }
+    }
     defaultConfig {
         applicationId "com.aegisnote"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -116,6 +132,9 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    // Ensure AppCompat is included (needed for React Native resources)
+    implementation("androidx.appcompat:appcompat:1.6.1")
 }
 
 apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)

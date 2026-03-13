@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#34C759"/>
+            <size android:width="128dp" android:height="128dp"/>
+        </shape>
+    </item>
+    <item>
+        <bitmap
+            android:src="@android:drawable/ic_menu_edit"
+            android:gravity="center"/>
+    </item>
+</layer-list>

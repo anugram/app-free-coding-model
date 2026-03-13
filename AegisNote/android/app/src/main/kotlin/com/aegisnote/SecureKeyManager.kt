@@ -3,6 +3,7 @@
 import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import android.util.Base64
 import androidx.annotation.RequiresApi
 import java.security.KeyStore
 import javax.crypto.KeyGenerator

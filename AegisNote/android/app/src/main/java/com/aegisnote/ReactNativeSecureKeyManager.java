@@ -8,10 +8,10 @@ import com.facebook.react.modules.core.DeviceEventManagerModule;
 
 public class ReactNativeSecureKeyManager extends ReactContextBaseJavaModule {
 
-    private final ReactContext mReactContext;
+    private final ReactApplicationContext mReactContext;
     private final SecureKeyManager mSecureKeyManager;
 
-    public ReactNativeSecureKeyManager(ReactContext reactContext) {
+    public ReactNativeSecureKeyManager(ReactApplicationContext reactContext) {
         super(reactContext);
         this.mReactContext = reactContext;
         this.mSecureKeyManager = SecureKeyManager.instance;

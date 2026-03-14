@@ -19,6 +19,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import {useNoteStore} from '../store/NoteStore';
+import {sensitiveDataScanner, ScannerStatus, SensitiveEntity} from '../core/sdd';
 
 interface NoteEditorViewProps {
   noteId: string | null;
@@ -46,6 +47,8 @@ export const NoteEditorView: React.FC<NoteEditorViewProps> = ({
   const [content, setContent] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [sensitiveEntities, setSensitiveEntities] = useState<SensitiveEntity[]>([]);
+  const [isScanning, setIsScanning] = useState(false);
 
   // Create ref for content input
   const contentInputRef = useRef<TextInput>(null);
@@ -78,18 +81,42 @@ export const NoteEditorView: React.FC<NoteEditorViewProps> = ({
     };
   }, []);
 
-  // Handle title change
-  const handleTitleChange = (newTitle: string) => {
-    setTitle(newTitle);
-    setHasUnsavedChanges(true);
-    setError(null);
-  };
-
   // Handle content change
-  const handleContentChange = (newContent: string) => {
+  const handleContentChange = async (newContent: string) => {
     setContent(newContent);
     setHasUnsavedChanges(true);
     setError(null);
+
+    // Scan for sensitive data in content
+    setIsScanning(true);
+    try {
+      const entities = await sensitiveDataScanner.scanText(newContent);
+      setSensitiveEntities(entities);
+    } catch (error) {
+      console.error('Error scanning for sensitive data:', error);
+      setSensitiveEntities([]);
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  // Scan on title change too
+  const handleTitleChange = async (newTitle: string) => {
+    setTitle(newTitle);
+    setHasUnsavedChanges(true);
+    setError(null);
+
+    // Scan for sensitive data in title
+    setIsScanning(true);
+    try {
+      const entities = await sensitiveDataScanner.scanText(newTitle);
+      setSensitiveEntities(entities);
+    } catch (error) {
+      console.error('Error scanning for sensitive data:', error);
+      setSensitiveEntities([]);
+    } finally {
+      setIsScanning(false);
+    }
   };
 
   // Save note
@@ -193,6 +220,20 @@ export const NoteEditorView: React.FC<NoteEditorViewProps> = ({
           </View>
         )}
 
+        {/* Sensitive Data Warning */}
+        {sensitiveEntities.length > 0 && !isScanning && (
+          <View style={styles.sensitiveWarningContainer}>
+            <Text style={styles.sensitiveWarningText}>
+              ⚠️ Sensitive data detected ({sensitiveEntities.length} found)
+            </Text>
+            <TouchableOpacity
+              style={styles.sensitiveWarningButton}
+              onPress={() => setSensitiveEntities([])}>
+              <Text style={styles.sensitiveWarningButtonText}>Dismiss</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Editor Content */}
         <ScrollView style={styles.editorContainer} showsVerticalScrollIndicator={false}>
           <TextInput
@@ -279,6 +320,33 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 12,
     color: '#856404',
+  },
+  sensitiveWarningContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFEBEE',
+    borderBottomWidth: 1,
+    borderBottomColor: '#FFCDD2',
+  },
+  sensitiveWarningText: {
+    fontSize: 12,
+    color: '#C62828',
+    flex: 1,
+  },
+  sensitiveWarningButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#C62828',
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  sensitiveWarningButtonText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   editorContainer: {
     flex: 1,

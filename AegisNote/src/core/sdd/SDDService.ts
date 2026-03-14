@@ -121,7 +121,7 @@ export class SDDService {
     }
 
     // Merge overlapping entities (keep highest confidence)
-    return this.mergeOverlappingEntities(entities);
+    return this.mergeOverlappingEntities(entities, text);
   }
 
   /**
@@ -261,6 +261,7 @@ export class SDDService {
    */
   private mergeOverlappingEntities(
     entities: SensitiveEntity[],
+    originalText: string,
   ): SensitiveEntity[] {
     if (entities.length === 0) {
       return [];
@@ -284,7 +285,7 @@ export class SDDService {
         // Merge if they're the same type
         else if (next.type === current.type && next.endIndex > current.endIndex) {
           current.endIndex = next.endIndex;
-          current.text = sorted[0].substring(current.startIndex, current.endIndex);
+          current.text = originalText.substring(current.startIndex, current.endIndex);
         }
       } else {
         merged.push(current);

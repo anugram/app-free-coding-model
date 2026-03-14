@@ -7,50 +7,21 @@
 import {SecureKeyManager} from '../SecureKeyManager';
 import {Note} from '../../types';
 
-// SQLCipher bridge interface
-interface SQLCipherDatabase {
-  open(filepath: string, key: string): Promise<void>;
-  close(): Promise<void>;
-  executeRaw(sql: string, params?: any[]): Promise<any>;
-  execute(sql: string, params?: any[]): Promise<any>;
-  executeBatch(sqlBatch: string[]): Promise<any>;
-  getOpenDatabaseNames(): Promise<string[]>;
-}
+// react-native-sqlite-storage bridge
+import SQLite from 'react-native-sqlite-storage';
 
-// Check if the database module is available
-import Database from 'react-native-sqlcipher-storage';
-console.log('[SQLCipher] Database module:', Database ? 'LOADED' : 'NOT LOADED');
-if (Database && Database.openDatabase) {
-  console.log('[SQLCipher] openDatabase:', typeof Database.openDatabase);
-}
-
-//declare module 'react-native-sqlcipher-storage' {
-//  export interface SQLiteDatabase {
-//    openDatabase(
-//      name: string,
-//      key: string,
-//      createCallback?: () => void,
-//      errorCallback?: (err: Error) => void
-//    ): SQLiteDatabase;
-//    close(): void;
-//    executeSql(
-//      sql: string,
-//      params?: any[],
-//      successCallback?: (result: any) => void,
-//      errorCallback?: (err: Error) => void
-//    ): void;
-//  }
-//  export default {
-//    openDatabase: (
-//      name: string,
-//      key: string,
-//      createCallback?: () => void,
-//      errorCallback?: (err: Error) => void
-//    ) => SQLiteDatabase;
-//  };
-//}
-
-import Database from 'react-native-sqlcipher-storage';
+// Open database helper - returns a promise
+const openDatabaseAsync = (name: string, key: string): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    const db = SQLite.openDatabase(name, key, () => {
+      console.log('Database opened successfully');
+    }, (err: Error) => {
+      console.error('Error opening database:', err);
+      reject(err);
+    });
+    resolve(db);
+  });
+};
 
 export interface StorageRepository {
   // Database lifecycle
@@ -75,7 +46,7 @@ export interface StorageRepository {
 }
 
 /**
- * Secure storage repository using SQLCipher for encrypted SQLite storage.
+ * Secure storage repository using SQLite for encrypted data persistence.
  * All sensitive data is encrypted using AES-256-GCM with keys from SecureKeyManager.
  */
 export class SecureStorageRepository implements StorageRepository {
@@ -113,26 +84,17 @@ export class SecureStorageRepository implements StorageRepository {
     }
 
     try {
-      console.log('[SQLCipher] Opening database with key (length:', key.length + ')');
+      console.log('[SQLite] Opening database with key (length:', key.length + ')');
       // Open the encrypted database
-      this.database = Database.openDatabase(
-        'aegisnote.db',
-        key,
-        () => {
-          console.log('Database opened successfully');
-        },
-        (err: Error) => {
-          console.error('Error opening database:', err);
-        },
-      );
-      console.log('[SQLCipher] Database object:', this.database);
+      this.database = await openDatabaseAsync('aegisnote.db', key);
+      console.log('[SQLite] Database object:', this.database);
 
       // Create the notes table
       await this.createTables();
 
       this.isInitialized = true;
     } catch (error: any) {
-      console.error('[SQLCipher] Detailed error:', error);
+      console.error('[SQLite] Detailed error:', error);
       throw new Error(`Failed to initialize secure database: ${error?.message || error}`);
     }
   }
@@ -143,7 +105,15 @@ export class SecureStorageRepository implements StorageRepository {
    */
   public async close(): Promise<void> {
     if (this.database) {
-      this.database.close();
+      await new Promise((resolve, reject) => {
+        this.database.close((result: any) => {
+          console.log('Database closed:', result);
+          resolve(true);
+        }, (err: Error) => {
+          console.error('Error closing database:', err);
+          reject(err);
+        });
+      });
       this.database = null;
       this.isInitialized = false;
     }

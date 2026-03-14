@@ -55,22 +55,18 @@ export const NoteListView: React.FC<NoteListViewProps> = ({
   // Render individual note item
   const renderNoteItem = useCallback(
     ({ item }: { item: Note }) => {
-      const formattedDate = useMemo(
-        () => new Date(item.updatedAt).toLocaleDateString(undefined, {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        }),
-        [item.updatedAt]
-      );
+      // Format date and time (not using useMemo here because calling hooks
+      // inside callbacks violates the Rules of Hooks)
+      const formattedDate = new Date(item.updatedAt).toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
 
-      const formattedTime = useMemo(
-        () => new Date(item.updatedAt).toLocaleTimeString(undefined, {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-        [item.updatedAt]
-      );
+      const formattedTime = new Date(item.updatedAt).toLocaleTimeString(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
 
       return (
         <TouchableOpacity

@@ -13,7 +13,7 @@
  */
 
 import {SDDService} from '../sdd/SDDService';
-import {SensitiveEntity, RedactionMapping, RedactionResult} from '../../types';
+import {SensitiveEntity, SensitiveEntityType, RedactionMapping, RedactionResult} from '../../types';
 import {
   PLACEHOLDER_PREFIX,
   PLACEHOLDER_SUFFIX,

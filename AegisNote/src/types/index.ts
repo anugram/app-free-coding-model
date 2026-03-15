@@ -43,3 +43,39 @@ export type NoteEvent =
   | { type: 'NOTE_UPDATED'; payload: Note }
   | { type: 'NOTE_DELETED'; payload: { id: string } }
   | { type: 'MEMORY_FLUSHED' };
+
+// ==================== LLM/Generative Types ===============
+
+/** LLM Task type for the generative assistant */
+export type LLMTaskType =
+  | 'SUMMARIZE'
+  | 'ACTION_ITEMS'
+  | 'RESPONSE'
+  | 'CLASSIFY'
+  | 'REWRITE';
+
+/** LLM task configuration */
+export type LLMTaskConfig = {
+  taskType: LLMTaskType;
+  systemPrompt?: string;
+  maxTokens?: number;
+  temperature?: number;
+};
+
+/** Generated response from LLM */
+export type LLMResponse = {
+  id: string;
+  text: string;
+  taskType: LLMTaskType;
+  promptTokens: number;
+  completionTokens: number;
+  timestamp: number;
+};
+
+/** Generative assistant state */
+export type GenerativeState = {
+  isGenerating: boolean;
+  currentTask: LLMTaskType | null;
+  response: string | null;
+  error: string | null;
+};

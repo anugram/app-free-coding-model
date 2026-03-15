@@ -12,7 +12,7 @@ declare module 'react-native-sqlite-storage' {
     ): void;
   }
 
-  const openDatabase: (
+  export const openDatabase: (
     name: string,
     key?: string,
     createCallback?: () => void,

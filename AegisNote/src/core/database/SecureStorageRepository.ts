@@ -8,19 +8,16 @@ import {SecureKeyManager} from '../SecureKeyManager';
 import {Note} from '../../types';
 
 // react-native-sqlite-storage bridge
-import SQLite from 'react-native-sqlite-storage';
+import SQLite, {openDatabase} from 'react-native-sqlite-storage';
 
-// Open database helper - returns a promise
-const openDatabaseAsync = (name: string, key: string): Promise<any> => {
-  return new Promise((resolve, reject) => {
-    const db = SQLite.openDatabase(name, key, () => {
-      console.log('Database opened successfully');
-    }, (err: Error) => {
-      console.error('Error opening database:', err);
-      reject(err);
-    });
-    resolve(db);
+// Open database helper - returns the database directly
+const openDatabaseSync = (name: string, key: string): any => {
+  const db = openDatabase(name, key, () => {
+    console.log('Database opened successfully');
+  }, (err: Error) => {
+    console.error('Error opening database:', err);
   });
+  return db;
 };
 
 export interface StorageRepository {
@@ -86,7 +83,7 @@ export class SecureStorageRepository implements StorageRepository {
     try {
       console.log('[SQLite] Opening database with key (length:', key.length + ')');
       // Open the encrypted database
-      this.database = await openDatabaseAsync('aegisnote.db', key);
+      this.database = openDatabaseSync('aegisnote.db', key);
       console.log('[SQLite] Database object:', this.database);
 
       // Create the notes table

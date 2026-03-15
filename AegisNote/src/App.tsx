@@ -15,7 +15,7 @@ import {NoteEditorView} from './views/NoteEditorView';
 import {useNoteStore} from './store/NoteStore';
 
 // Create key manager instance
-const keyManager = new SecureKeyManager();
+const keyManager = SecureKeyManager.getInstance();
 
 /**
  * Main App Component

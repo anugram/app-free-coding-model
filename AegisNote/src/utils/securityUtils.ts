@@ -31,7 +31,8 @@ export function sanitizeString(input: string): string {
 export function generateSecureRandomString(length: number): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   const array = new Uint8Array(length);
-  window.crypto.getRandomValues(array);
+  // In React Native, crypto is available globally (not window.crypto)
+  (global as any).crypto.getRandomValues(array);
 
   let result = '';
   for (let i = 0; i < length; i++) {

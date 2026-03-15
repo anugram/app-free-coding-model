@@ -28,3 +28,31 @@ export const MEMORY_WARNING_THRESHOLD_ANDROID = 0.3; // 30%
 // Redaction placeholders
 export const PLACEHOLDER_PREFIX = '[';
 export const PLACEHOLDER_SUFFIX = ']';
+
+// LLM defaults
+export const DEFAULT_LLM_TEMP = 0.7;
+export const DEFAULT_LLM_MAX_TOKENS = 512;
+export const DEFAULT_LLM_TOP_P = 0.9;
+
+// LLM system prompts
+export const LLM_SYSTEM_PROMPT =
+  'You are a helpful, privacy-focused assistant. ' +
+  'You help users organize their thoughts, summarize content, and extract action items. ' +
+  'Always prioritize conciseness and clarity.';
+
+// Default stop sequences
+export const LLM_STOP_SEQUENCES = ['</s>', 'User:', 'Assistant:', '\n\n'];
+
+// Generative task prompts
+export const GENERATIVE_TASKS = {
+  SUMMARIZE:
+    'Provide a concise summary of the following content, highlighting key points:',
+  ACTION_ITEMS:
+    'Extract action items or tasks from the following text as a bullet list:',
+  RESPONSE:
+    'Respond to the following input in a helpful and concise manner:',
+  CLASSIFY:
+    'Classify the following text into one of these categories: Personal, Work, Ideas, Tasks, Other. Output only the category name:',
+  REWRITE:
+    'Rewrite the following text to be more concise and clear while preserving the meaning:',
+};

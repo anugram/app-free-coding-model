@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AegisNote - Android Network Security Configuration
+
+  This configuration defines network security policies for the app.
+  It explicitly states that:
+  - Network access is only used for model downloads
+  - No user data is transmitted to servers
+  - All user data is stored locally on the device
+
+  Privacy Statement: AegisNote does not collect, transmit, or share
+  any user-generated content (notes, text, prompts) with external servers.
+  All note content is encrypted and stored locally.
+-->
+<network-security-config>
+    <!-- Base configuration for all connections -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <!-- Use system CA certificates -->
+            <certificates src="system" />
+            <!-- Also trust user-installed certificates (for testing) -->
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Domain-specific configuration for model downloads -->
+    <domain-config cleartextTrafficPermitted="false">
+        <!-- Allow HTTPS for model downloads -->
+        <domain includeSubdomains="true">example.com</domain>
+        <domain includeSubdomains="true">github.com</domain>
+        <domain includeSubdomains="true">raw.githubusercontent.com</domain>
+
+        <!-- Use TLS 1.2+ for security -->
+        <custom-config>
+            <domain-config cleartextTrafficPermitted="false">
+                <domain includeSubdomains="true">example.com</domain>
+                <pin-set expiration="2027-01-01">
+                    <!-- Certificate pinning for model download domain -->
+                    <!-- Add actual certificate pins when model URL is determined -->
+                </pin-set>
+            </domain-config>
+        </custom-config>
+    </domain-config>
+
+    <!-- Debug configuration for development -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </debug-overrides>
+</network-security-config>

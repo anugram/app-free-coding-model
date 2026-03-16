@@ -4,6 +4,8 @@
  * Provides security-related utility functions for the application.
  */
 
+import {sha256String} from './HashUtils';
+
 /**
  * Clear sensitive data from memory securely.
  * Overwrites string data before garbage collection.
@@ -31,7 +33,7 @@ export function sanitizeString(input: string): string {
 export function generateSecureRandomString(length: number): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   const array = new Uint8Array(length);
-  // In React Native, crypto is available globally (not window.crypto)
+  // In React Native, crypto is available globally
   (global as any).crypto.getRandomValues(array);
 
   let result = '';
@@ -46,11 +48,7 @@ export function generateSecureRandomString(length: number): string {
  * Hash data using SHA-256.
  */
 export async function sha256(data: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const dataBuffer = encoder.encode(data);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return sha256String(data);
 }
 
 /**

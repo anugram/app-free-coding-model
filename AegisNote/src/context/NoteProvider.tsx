@@ -8,6 +8,8 @@ import React, { createContext, useContext, useEffect, useCallback } from 'react'
 import { AppState, AppStateStatus, Platform } from 'react-native';
 import { SecureKeyManager } from '../core/SecureKeyManager';
 import { useNoteStore, handleAppBackground, cleanupNoteStore } from '../store/NoteStore';
+import { memoryManager } from '../core/MemoryManager/MemoryWarningManager';
+import { accessibilityManager } from '../core/Accessibility/AccessibilityManager';
 
 interface NoteContextType {
   keyManager: SecureKeyManager;
@@ -29,6 +31,8 @@ export interface NoteProviderProps {
  * - Handles app state changes (foreground/background)
  * - Flushes memory when app goes to background for security
  * - Cleans up resources on unmount
+ * - Monitors memory pressure to prevent OOM crashes
+ * - Manages accessibility features for screen readers
  */
 export const NoteProvider: React.FC<NoteProviderProps> = ({ children, keyManager }) => {
   const { initialize, flushMemory, setKeyManager, isLoading } = useNoteStore();
@@ -43,6 +47,8 @@ export const NoteProvider: React.FC<NoteProviderProps> = ({ children, keyManager
     if (nextAppState === 'background' || nextAppState === 'inactive') {
       // Flush memory when app goes to background
       handleAppBackground();
+      // Report inference end if app goes to background
+      memoryManager.reportInferenceEnd();
     }
   }, []);
 
@@ -50,6 +56,14 @@ export const NoteProvider: React.FC<NoteProviderProps> = ({ children, keyManager
   useEffect(() => {
     const initStore = async () => {
       try {
+        // Initialize memory manager first
+        await memoryManager.initialize();
+        console.log('[NoteProvider] Memory manager initialized');
+
+        // Initialize accessibility manager
+        await accessibilityManager.initialize();
+        console.log('[NoteProvider] Accessibility manager initialized');
+
         // Check if key exists, if not generate it
         const hasKey = await keyManager.hasKey();
         console.log('[NoteProvider] Key exists:', hasKey);
@@ -69,6 +83,7 @@ export const NoteProvider: React.FC<NoteProviderProps> = ({ children, keyManager
         console.log('[NoteProvider] Retrieved key length:', key?.length || 0);
 
         await initialize();
+        console.log('[NoteProvider] Store initialized successfully');
       } catch (error) {
         console.error('Failed to initialize note store:', error);
       }
@@ -82,6 +97,8 @@ export const NoteProvider: React.FC<NoteProviderProps> = ({ children, keyManager
     return () => {
       subscription.remove();
       cleanupNoteStore();
+      memoryManager.cleanup();
+      accessibilityManager.cleanup();
     };
   }, [initialize]);
 

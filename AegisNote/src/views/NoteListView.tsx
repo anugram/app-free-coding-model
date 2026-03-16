@@ -4,7 +4,7 @@
  * Implements 60fps scrolling with FlatList optimization.
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback } from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -37,7 +37,7 @@ export const NoteListView: React.FC<NoteListViewProps> = ({
   onNoteSelect,
   onNoteCreate,
 }) => {
-  const { notes, isLoading, loadNotes, flushMemory } = useNoteStore();
+  const { notes, isLoading, loadNotes } = useNoteStore();
 
   // Handle note selection
   const handleNotePress = useCallback(
@@ -55,8 +55,6 @@ export const NoteListView: React.FC<NoteListViewProps> = ({
   // Render individual note item
   const renderNoteItem = useCallback(
     ({ item }: { item: Note }) => {
-      // Format date and time (not using useMemo here because calling hooks
-      // inside callbacks violates the Rules of Hooks)
       const formattedDate = new Date(item.updatedAt).toLocaleDateString(undefined, {
         month: 'short',
         day: 'numeric',
@@ -72,16 +70,23 @@ export const NoteListView: React.FC<NoteListViewProps> = ({
         <TouchableOpacity
           style={styles.noteItem}
           onPress={() => handleNotePress(item.id)}
-          activeOpacity={0.7}>
+          activeOpacity={0.8}>
           <View style={styles.noteHeader}>
-            <Text style={styles.noteTitle} numberOfLines={1}>
-              {item.title || 'Untitled Note'}
-            </Text>
-            <Text style={styles.noteTime}>
-              {formattedTime}
-            </Text>
+            <View style={styles.noteTitleContainer}>
+              <Text style={styles.noteTitle} numberOfLines={1}>
+                {item.title || 'Untitled Note'}
+              </Text>
+              {item.encryptedContent.length > 50 && (
+                <Text style={styles.notePreview} numberOfLines={1}>
+                  {item.encryptedContent}
+                </Text>
+              )}
+            </View>
+            <View style={styles.noteMeta}>
+              <Text style={styles.noteTime}>{formattedTime}</Text>
+              <Text style={styles.noteDate}>{formattedDate}</Text>
+            </View>
           </View>
-          <Text style={styles.noteDate}>{formattedDate}</Text>
         </TouchableOpacity>
       );
     },
@@ -93,15 +98,21 @@ export const NoteListView: React.FC<NoteListViewProps> = ({
     return (
       <View style={styles.emptyContainer}>
         <View style={styles.emptyIcon}>
-          <Text style={styles.emptyIconText}>âœŽ</Text>
+          <Text style={styles.emptyIconText}>📝</Text>
         </View>
         <Text style={styles.emptyTitle}>No encrypted notes yet</Text>
         <Text style={styles.emptySubtitle}>
           Create your first secure note to get started
         </Text>
+        <TouchableOpacity
+          style={styles.createButton}
+          onPress={onNoteCreate}
+          activeOpacity={0.8}>
+          <Text style={styles.createButtonText}>Create Note</Text>
+        </TouchableOpacity>
       </View>
     );
-  }, []);
+  }, [onNoteCreate]);
 
   // Calculate total notes count
   const noteCount = notes.length;
@@ -110,9 +121,17 @@ export const NoteListView: React.FC<NoteListViewProps> = ({
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>AegisNote</Text>
-        <Text style={styles.subtitle}>
-          {noteCount} {noteCount === 1 ? 'note' : 'notes'} secured
-        </Text>
+        <View style={styles.statsContainer}>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{noteCount}</Text>
+            <Text style={styles.statLabel}>Notes</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{notes.reduce((acc, n) => acc + n.encryptedContent.length, 0)} chars</Text>
+            <Text style={styles.statLabel}>Total</Text>
+          </View>
+        </View>
       </View>
 
       <View style={styles.notesContainer}>
@@ -166,7 +185,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
   },
   header: {
-    padding: 20,
+    padding: 24,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
@@ -174,12 +193,31 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#1a1a2e',
+    marginBottom: 16,
   },
-  subtitle: {
-    fontSize: 14,
+  statsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#007AFF',
+  },
+  statLabel: {
+    fontSize: 12,
     color: '#666',
     marginTop: 4,
+  },
+  statDivider: {
+    width: 1,
+    height: '100%',
+    backgroundColor: '#E0E0E0',
   },
   notesContainer: {
     flex: 1,
@@ -199,36 +237,47 @@ const styles = StyleSheet.create({
   },
   noteItem: {
     backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
+    padding: 20,
+    borderRadius: 16,
     marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   noteHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 4,
+  },
+  noteTitleContainer: {
+    flex: 1,
+    marginRight: 12,
   },
   noteTitle: {
-    flex: 1,
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
-    marginRight: 8,
+    color: '#1a1a2e',
+    marginBottom: 4,
+  },
+  notePreview: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
+  },
+  noteMeta: {
+    alignItems: 'flex-end',
   },
   noteTime: {
-    fontSize: 11,
-    color: '#999',
-    marginLeft: 8,
+    fontSize: 12,
+    color: '#007AFF',
+    fontWeight: '500',
   },
   noteDate: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#999',
+    marginTop: 2,
   },
   emptyContainer: {
     flex: 1,
@@ -241,7 +290,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: '#E8F4FD',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
@@ -252,7 +301,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: '#1a1a2e',
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -261,6 +310,18 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     lineHeight: 20,
+    marginBottom: 24,
+  },
+  createButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  createButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   loadingContainer: {
     flex: 1,

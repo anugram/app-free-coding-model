@@ -52,8 +52,11 @@ let repository: SecureStorageRepository | null = null;
 
 const initializeRepository = async (keyManager: SecureKeyManager): Promise<SecureStorageRepository> => {
   if (!repository) {
+    console.log('[NoteStore] Creating new repository instance...');
     repository = SecureStorageRepository.getInstance(keyManager);
+    console.log('[NoteStore] Repository instance created, calling initialize...');
     await repository.initialize();
+    console.log('[NoteStore] Repository initialize completed');
   }
   return repository;
 };
@@ -93,8 +96,11 @@ export const useNoteStore = create<NoteState & {keyManager: SecureKeyManager | n
 
       try {
         set({isLoading: true, error: null});
+        console.log('[NoteStore] Initializing repository...');
         await initializeRepository(keyManager);
+        console.log('[NoteStore] Repository initialized, loading notes...');
         await get().loadNotes();
+        console.log('[NoteStore] Notes loaded successfully');
       } catch (error) {
         console.error('Failed to initialize store:', error);
         set({error: 'Failed to initialize secure storage'});
@@ -112,8 +118,10 @@ export const useNoteStore = create<NoteState & {keyManager: SecureKeyManager | n
 
       try {
         set({isLoading: true, error: null});
+        console.log('[NoteStore] loadNotes called, repository exists:', !!repository);
         if (repository) {
           const notes = await repository.getAllNotes();
+          console.log('[NoteStore] Notes loaded from repository:', notes.length);
           set({notes, isLoading: false});
         }
       } catch (error) {

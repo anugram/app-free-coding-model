@@ -9,14 +9,18 @@ import {Note} from '../../types';
 
 // react-native-sqlite-storage bridge
 import SQLite, {openDatabase} from 'react-native-sqlite-storage';
+// Encryption service for note content
+import {encryptionService} from '../encryption/EncryptionService';
 
 // Open database helper - returns the database directly
 const openDatabaseSync = (name: string, key: string): any => {
+  console.log('[SQLite] openDatabase called with name:', name, 'key length:', key.length);
   const db = openDatabase(name, key, () => {
-    console.log('Database opened successfully');
+    console.log('[SQLite] Database opened successfully callback');
   }, (err: Error) => {
-    console.error('Error opening database:', err);
+    console.error('[SQLite] Error opening database:', err);
   });
+  console.log('[SQLite] openDatabase returned:', db ? 'database object' : 'null');
   return db;
 };
 
@@ -50,6 +54,7 @@ export class SecureStorageRepository implements StorageRepository {
   private static instance: SecureStorageRepository;
   private database: any | null = null;
   private isInitialized: boolean = false;
+  private cachedKey: string | null = null;
 
   constructor(private keyManager: SecureKeyManager) {}
 
@@ -71,7 +76,7 @@ export class SecureStorageRepository implements StorageRepository {
       return;
     }
 
-    // Get the encryption key from secure key manager
+    // Get the encryption key from secure key manager and cache it
     const key = await this.keyManager.retrieveKey();
     console.log('[SecureStorageRepository] Retrieved encryption key, length:', key?.length || 0);
     if (!key) {
@@ -79,6 +84,7 @@ export class SecureStorageRepository implements StorageRepository {
         'Database encryption key not found. Please generate a key first.',
       );
     }
+    this.cachedKey = key;
 
     try {
       console.log('[SQLite] Opening database with key (length:', key.length + ')');
@@ -87,9 +93,12 @@ export class SecureStorageRepository implements StorageRepository {
       console.log('[SQLite] Database object:', this.database);
 
       // Create the notes table
+      console.log('[SQLite] Creating tables...');
       await this.createTables();
+      console.log('[SQLite] Tables created');
 
       this.isInitialized = true;
+      console.log('[SQLite] Repository initialized successfully');
     } catch (error: any) {
       console.error('[SQLite] Detailed error:', error);
       throw new Error(`Failed to initialize secure database: ${error?.message || error}`);
@@ -113,6 +122,7 @@ export class SecureStorageRepository implements StorageRepository {
       });
       this.database = null;
       this.isInitialized = false;
+      this.cachedKey = null;
     }
   }
 
@@ -143,9 +153,15 @@ export class SecureStorageRepository implements StorageRepository {
         return reject(new Error('Database not initialized'));
       }
 
+      const timeout = setTimeout(() => {
+        reject(new Error('SQL execution timeout'));
+      }, 30000); // 30 second timeout
+
       this.database.executeSql(sql, params, (result: any) => {
+        clearTimeout(timeout);
         resolve(result);
       }, (err: Error) => {
+        clearTimeout(timeout);
         reject(err);
       });
     });
@@ -162,6 +178,44 @@ export class SecureStorageRepository implements StorageRepository {
     });
   }
 
+  // ==================== Encryption Helpers ====================
+
+  /**
+   * Encrypt note content before storage.
+   */
+  private async encryptContent(content: string): Promise<{ciphertext: string; iv: string}> {
+    if (!this.cachedKey) {
+      throw new Error('Repository not initialized');
+    }
+    // Convert key string to Uint8Array
+    const keyBytes = new Uint8Array(this.cachedKey.length);
+    for (let i = 0; i < this.cachedKey.length; i++) {
+      keyBytes[i] = this.cachedKey.charCodeAt(i);
+    }
+
+    // Use simple encryption for compatibility
+    return encryptionService.encryptSimple(content, keyBytes);
+  }
+
+  /**
+   * Decrypt note content after retrieval.
+   */
+  private async decryptContent(ciphertext: string, iv: string): Promise<string> {
+    if (!this.cachedKey) {
+      throw new Error('Repository not initialized');
+    }
+    // Convert key string to Uint8Array
+    const keyBytes = new Uint8Array(this.cachedKey.length);
+    for (let i = 0; i < this.cachedKey.length; i++) {
+      keyBytes[i] = this.cachedKey.charCodeAt(i);
+    }
+
+    console.log('[decrypt] Starting decryption, ciphertext length:', ciphertext.length, 'iv length:', iv.length);
+    const result = await encryptionService.decryptSimple(ciphertext, keyBytes, iv);
+    console.log('[decrypt] Decryption completed');
+    return result;
+  }
+
   // ==================== Note CRUD Operations ====================
 
   /**
@@ -171,9 +225,14 @@ export class SecureStorageRepository implements StorageRepository {
     const id = this.generateUUID();
     const now = Date.now();
 
+    // Encrypt the content before storage
+    const {ciphertext, iv} = await this.encryptContent(noteData.encryptedContent);
+
     const note: Note = {
-      ...noteData,
       id,
+      title: noteData.title,
+      encryptedContent: ciphertext,
+      iv,
       createdAt: now,
       updatedAt: now,
     };
@@ -204,10 +263,14 @@ export class SecureStorageRepository implements StorageRepository {
 
     if (results.rows.length > 0) {
       const row = results.rows.item(0);
+
+      // Decrypt content
+      const decryptedContent = await this.decryptContent(row.encrypted_content, row.iv);
+
       return {
         id: row.id,
         title: row.title,
-        encryptedContent: row.encrypted_content,
+        encryptedContent: decryptedContent,
         iv: row.iv,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
@@ -227,20 +290,29 @@ export class SecureStorageRepository implements StorageRepository {
       LIMIT 1000
     `;
 
+    console.log('[SQLite] Executing getAllNotes query...');
     const results = await this.executeSql(selectSQL, []);
+    console.log('[SQLite] Query returned, rows count:', results.rows.length);
 
     const notes: Note[] = [];
     for (let i = 0; i < results.rows.length; i++) {
       const row = results.rows.item(i);
+      console.log('[SQLite] Decrypting note:', row.id);
+
+      // Decrypt content
+      const decryptedContent = await this.decryptContent(row.encrypted_content, row.iv);
+      console.log('[SQLite] Decrypted content length:', decryptedContent.length);
+
       notes.push({
         id: row.id,
         title: row.title,
-        encryptedContent: row.encrypted_content,
+        encryptedContent: decryptedContent,
         iv: row.iv,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
       });
     }
+    console.log('[SQLite] getAllNotes completed, notes count:', notes.length);
 
     return notes;
   }
@@ -249,6 +321,9 @@ export class SecureStorageRepository implements StorageRepository {
    * Update an existing note.
    */
   public async updateNote(note: Note): Promise<void> {
+    // Re-encrypt the content
+    const {ciphertext, iv} = await this.encryptContent(note.encryptedContent);
+
     const updateSQL = `
       UPDATE notes
       SET title = ?, encrypted_content = ?, iv = ?, updated_at = ?
@@ -257,8 +332,8 @@ export class SecureStorageRepository implements StorageRepository {
 
     await this.executeSql(updateSQL, [
       note.title,
-      note.encryptedContent,
-      note.iv,
+      ciphertext,
+      iv,
       note.updatedAt,
       note.id,
     ]);

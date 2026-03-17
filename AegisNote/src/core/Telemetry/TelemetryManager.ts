@@ -164,38 +164,44 @@ export class TelemetryManagerImpl implements TelemetryManager {
   async initialize(config: TelemetryConfig): Promise<void> {
     console.log('[Telemetry] Initializing Sentry with privacy controls...');
 
-    Sentry.init({
-      dsn: config.dsn,
-      enableAutoSessionTracking: true,
-      sessionTrackingIntervalMillis: 30000,
-      sampleRate: config.errorSampleRate,
-      ...(config.performanceSampleRate ? { tracesSampleRate: config.performanceSampleRate } : {}),
-      debug: config.debug,
-      // Don't send breadcrumbs that might contain user data
-      integrations: [
-        // Only include essential integrations
-        new Sentry.Breadcrumbs({
-          console: false, // Don't log console breadcrumbs
-          dom: false, // Don't log DOM events
-          http: true, // Keep HTTP for network errors (but sanitized)
-        }),
-      ],
-      // Sanitize all data before sending
-      beforeSend: (event, hint) => {
-        return this.beforeSend(event, hint);
-      },
-      // Don't capture URLs that might contain user data
-      sanitizeFn: (value) => {
-        // Sanitize any string values that might contain user data
-        if (typeof value === 'string') {
-          return sanitizeErrorMessage(value);
-        }
-        return value;
-      },
-    });
+    try {
+      Sentry.init({
+        dsn: config.dsn,
+        enableAutoSessionTracking: true,
+        sessionTrackingIntervalMillis: 30000,
+        sampleRate: config.errorSampleRate,
+        ...(config.performanceSampleRate ? {tracesSampleRate: config.performanceSampleRate} : {}),
+        debug: config.debug,
+        // Don't send breadcrumbs that might contain user data
+        integrations: [
+          // Only include essential integrations
+          new Sentry.Breadcrumbs({
+            console: false, // Don't log console breadcrumbs
+            dom: false, // Don't log DOM events
+            http: true, // Keep HTTP for network errors (but sanitized)
+          }),
+        ],
+        // Sanitize all data before sending
+        beforeSend: (event, hint) => {
+          return this.beforeSend(event, hint);
+        },
+        // Don't capture URLs that might contain user data
+        sanitizeFn: (value) => {
+          // Sanitize any string values that might contain user data
+          if (typeof value === 'string') {
+            return sanitizeErrorMessage(value);
+          }
+          return value;
+        },
+      });
 
-    this.initialized = true;
-    console.log('[Telemetry] Sentry initialized successfully');
+      this.initialized = true;
+      console.log('[Telemetry] Sentry initialized successfully');
+    } catch (error) {
+      console.error('[Telemetry] Failed to initialize Sentry:', error);
+      // Don't throw - continue without telemetry
+      this.initialized = false;
+    }
   }
 
   /**
@@ -204,7 +210,11 @@ export class TelemetryManagerImpl implements TelemetryManager {
   cleanup(): void {
     console.log('[Telemetry] Cleaning up Sentry resources...');
     if (this.initialized) {
-      Sentry.close();
+      try {
+        Sentry.close();
+      } catch (error) {
+        console.log('[Telemetry] Error closing Sentry:', error);
+      }
       this.initialized = false;
     }
   }
@@ -220,15 +230,19 @@ export class TelemetryManagerImpl implements TelemetryManager {
     const sanitizedData = sanitizeEventData(data);
     console.log(`[Telemetry] Capturing event: ${event}`, sanitizedData);
 
-    Sentry.captureEvent({
-      level: 'info',
-      event_id: Sentry.generateSpanId(),
-      timestamp: Date.now() / 1000,
-      extra: sanitizedData,
-      tags: {
-        event_type: event,
-      },
-    });
+    try {
+      Sentry.captureEvent({
+        level: 'info',
+        event_id: Sentry.generateSpanId(),
+        timestamp: Date.now() / 1000,
+        extra: sanitizedData,
+        tags: {
+          event_type: event,
+        },
+      });
+    } catch (error) {
+      console.error('[Telemetry] Error capturing event:', error);
+    }
   }
 
   /**
@@ -244,18 +258,22 @@ export class TelemetryManagerImpl implements TelemetryManager {
     // Create sanitized error message
     const sanitizedMessage = sanitizeErrorMessage(error.message);
 
-    Sentry.captureException(error, {
-      messages: [
-        {
-          formula: sanitizedMessage,
-          params: [],
+    try {
+      Sentry.captureException(error, {
+        messages: [
+          {
+            formula: sanitizedMessage,
+            params: [],
+          },
+        ],
+        tags: {
+          context: context || 'unknown',
+          privacy_safe: 'true', // Tag to identify sanitized events
         },
-      ],
-      tags: {
-        context: context || 'unknown',
-        privacy_safe: 'true', // Tag to identify sanitized events
-      },
-    });
+      });
+    } catch (error) {
+      console.error('[Telemetry] Error capturing exception:', error);
+    }
   }
 
   /**
@@ -266,10 +284,14 @@ export class TelemetryManagerImpl implements TelemetryManager {
       return;
     }
 
-    // Hash the ID before sending to Sentry
-    Sentry.setUser({
-      id: this.hashId(id),
-    });
+    try {
+      // Hash the ID before sending to Sentry
+      Sentry.setUser({
+        id: this.hashId(id),
+      });
+    } catch (error) {
+      console.error('[Telemetry] Error setting user:', error);
+    }
   }
 
   /**
@@ -280,7 +302,11 @@ export class TelemetryManagerImpl implements TelemetryManager {
       return;
     }
 
-    Sentry.setUser(null);
+    try {
+      Sentry.setUser(null);
+    } catch (error) {
+      console.error('[Telemetry] Error clearing user:', error);
+    }
   }
 
   /**
@@ -291,7 +317,12 @@ export class TelemetryManagerImpl implements TelemetryManager {
       return null;
     }
 
-    return Sentry.startTransaction({ name });
+    try {
+      return Sentry.startTransaction({name});
+    } catch (error) {
+      console.error('[Telemetry] Error starting transaction:', error);
+      return null;
+    }
   }
 
   /**
@@ -422,7 +453,7 @@ export class TelemetryManagerImpl implements TelemetryManager {
   /**
    * Hash ID for anonymization
    */
-  private async hashId(id: string): Promise<string> {
+  private hashId(id: string): string {
     try {
       // Use a simple hash - in production, use a proper crypto library
       let hash = 0;

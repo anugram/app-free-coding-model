@@ -80,12 +80,6 @@ export interface MemoryManager {
 }
 
 /**
- * Native bridge for iOS memory warnings
- */
-const RNSMemoryWarning = NativeModules.RNSMemoryWarning || null;
-const RNSMemoryManager = NativeModules.RNSMemoryManager || null;
-
-/**
  * Memory Manager implementation
  */
 export class MemoryManagerImpl implements MemoryManager {
@@ -98,11 +92,7 @@ export class MemoryManagerImpl implements MemoryManager {
   private maxMemory: number = 0;
 
   private constructor() {
-    if (Platform.OS === 'ios' && RNSMemoryWarning) {
-      this.eventEmitter = new NativeEventEmitter(RNSMemoryWarning);
-    } else if (Platform.OS === 'android' && RNSMemoryManager) {
-      this.eventEmitter = new NativeEventEmitter(RNSMemoryManager);
-    }
+    // Only create event emitter if native modules exist
   }
 
   public static getInstance(): MemoryManagerImpl {
@@ -118,29 +108,9 @@ export class MemoryManagerImpl implements MemoryManager {
   async initialize(): Promise<void> {
     console.log('[MemoryManager] Initializing memory warning listeners...');
 
-    // Get total memory info
-    await this.getAvailableMemory();
-
     // Listen for app state changes (iOS)
     this.handleAppStateChange = this.handleAppStateChange.bind(this);
     AppState.addEventListener('change', this.handleAppStateChange);
-
-    // Listen for memory warnings on iOS
-    if (this.eventEmitter) {
-      this.memoryWarningSubscription = this.eventEmitter.addListener(
-        'MemoryWarning',
-        (event: MemoryEvent) => {
-          this.handleMemoryWarning(event);
-        },
-      );
-    }
-
-    // Listen for Android memory trim events
-    if (Platform.OS === 'android') {
-      this.handleMemoryTrim = this.handleMemoryTrim.bind(this);
-      // Android memory trim is handled via AppState background events
-      // and native module callbacks
-    }
 
     console.log('[MemoryManager] Memory listeners initialized');
   }
@@ -149,13 +119,9 @@ export class MemoryManagerImpl implements MemoryManager {
    * Cleanup memory warning listeners
    */
   cleanup(): void {
-    console.log('[MemoryManager] Cleaning up memory listeners. ..');
+    console.log('[MemoryManager] Cleaning up memory listeners...');
 
     AppState.removeEventListener('change', this.handleAppStateChange);
-
-    if (this.memoryWarningSubscription) {
-      this.memoryWarningSubscription.remove();
-    }
 
     this.memoryListeners.clear();
   }
@@ -190,21 +156,10 @@ export class MemoryManagerImpl implements MemoryManager {
    */
   async getAvailableMemory(): Promise<number> {
     try {
-      if (Platform.OS === 'ios' && RNSMemoryManager) {
-        const info = await RNSMemoryManager.getMemoryInfo();
-        this.maxMemory = info.totalMemory || 0;
-        return info.freeMemory || 0;
-      } else if (Platform.OS === 'android') {
-        // Get memory info from NativeModules
-        const info = await RNFS.getFSInfo && (await RNFS.getFSInfo());
-        // Estimate RAM from free disk space (not accurate but provides rough estimate)
-        this.maxMemory = 2 * 1024 * 1024 * 1024; // Default to 2GB for most devices
-        return info?.freeSpace || 512 * 1024 * 1024;
-      }
-
-      // Fallback estimates
-      this.maxMemory = 2 * 1024 * 1024 * 1024;
-      return 512 * 1024 * 1024;
+      // For now, use simple estimation
+      // In production, use react-native-device-info or similar
+      this.maxMemory = 2 * 1024 * 1024 * 1024; // Default to 2GB for most devices
+      return 512 * 1024 * 1024; // Default 512MB available
     } catch (error) {
       console.error('[MemoryManager] Error getting memory info:', error);
       return 512 * 1024 * 1024; // Default 512MB
@@ -242,27 +197,6 @@ export class MemoryManagerImpl implements MemoryManager {
 
   // Private handlers
 
-  private handleMemoryWarning = (event: MemoryEvent) => {
-    console.log(`[MemoryManager] Memory warning received: ${event.pressure}`);
-    this.pressure = event.pressure;
-
-    // Notify all listeners
-    this.memoryListeners.forEach((callback) => {
-      try {
-        callback(event);
-      } catch (error) {
-        console.error('[MemoryManager] Error in memory warning callback:', error);
-      }
-    });
-
-    // If critical, force cleanup of inference resources
-    if (event.pressure === 'critical' && this.inferenceCount > 0) {
-      console.warn('[MemoryManager] CRITICAL: Forcing inference pause due to memory pressure');
-      // This would trigger the actual inference pause in the UI layer
-      this.onMemoryCritical();
-    }
-  };
-
   private handleAppStateChange = (nextAppState: AppStateStatus) => {
     if (Platform.OS === 'android') {
       // On Android, memory trim events are sent when app goes to background
@@ -280,9 +214,7 @@ export class MemoryManagerImpl implements MemoryManager {
   };
 
   // Subscription reference
-  private memoryWarningSubscription: any = null;
   private handleAppStateChange: (appState: AppStateStatus) => void;
-  private handleMemoryTrim: (level: number) => void;
 }
 
 // Export singleton instance
